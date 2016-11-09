@@ -78,9 +78,10 @@ Computer Science IPB
 #define KRGBK {B00100000,B01000000,B01000000,B01000000,B01000000,B00100000}
 #define LOVE {B00000000,B00101000,B01111100,B01111100,B00111000,B00010000}
 #define PESAWAT {B00000000,B00001000,B00010011,B11111110,B00010001,B00001000}
+#define blok {B11111111,B11111111,B11111111,B11111111,B11111111,B11111111}
 
-#define panjang 47
-#define kecepatan 7
+#define panjang 4
+#define kecepatan 20
 
 int latchPin = 10;
 int clockPin = 13;
@@ -91,11 +92,10 @@ int latchPinPORTB = latchPin - 8;
 int clockPinPORTB = clockPin - 8;
 int dataPinPORTB = dataPin - 8;
 int i = 0;
-long scrolling_word[6];
-int array_turn=0;
+long outputKata[6];
+int array_turn = 0;
 
-byte your_text[panjang][6]={BS,LE,LL,LA,LM,LA,LT,SPACE,BD,LA,LT,LA,LN,LG,SPACE,LD,LI,SPACE,BK,LO,LM,LU,LN,LI,LT,LA,LS,SPACE,BA,BG,BR,BI,BB,BO,BT,SPACE,BI,LL,LK,LO,LM,SPACE,BI,BP,BB,SPACE,SMILE};//MASUKAN TEKS MU DI SINI
-
+byte inputan_text[panjang][6]={BR,BY,BA,BN}; // masukin teksnya disini
 
 void setup(){
   Serial.begin(9600);
@@ -109,51 +109,48 @@ void setup(){
   setupSPI();
 }
 
-void display_word(int loops,byte word_print[][6],int num_patterns,int delay_langth){// this function displays your symbols
-  i = 0;// resets the counter fot the 4017
-  for(int g=0;g<6;g++)//resets the the long int where your word goes
-    scrolling_word[g] = 0;
-  for(int x=0;x<num_patterns;x++){//main loop, goes over your symbols
-   // you will need to find a better way to make the symbols scroll my way is limited for 24 columns
-
-   for(int r=0;r<6;r++)//puts the buildes the first symbol
-      scrolling_word[r] |= word_print[x][r]; 
-    for (int z=0;z<6;z++){//the sctolling action
+void display_word(int loops,byte word_print[][6],int panjangKata,int kecepatan){
+  i = 0; // ngereset IC 4017
+  for(int g=0;g<6;g++)
+    outputKata[g] = 0;
+  for(int x=0;x<panjangKata;x++){
+   for(int r=0;r<6;r++)
+      outputKata[r] |= word_print[x][r]; 
+    for (int z=0;z<6;z++){
         for(int p=0;p<6;p++)
-          scrolling_word[p] = scrolling_word[p] << 1;
-// end of the scrolling funcion
-      for(int t=0;t<delay_langth;t++){// delay function, it just loops over the same display
-        for(int y=0;y<6;y++){// scaning the display
-          if(i == 6){// counting up to 6 with the 4017
+          outputKata[p] = outputKata[p] << 1;
+      for(int t=0;t<kecepatan;t++){
+        for(int y=0;y<6;y++){
+          if(i == 6){
             digitalWrite(Reset,HIGH);
             digitalWrite(Reset,LOW);
             i = 0;
           }
           latchOff();
-          spi_transfer(make_word(0x01000000,y));// sending the data
+          spi_transfer(make_word(0x01000000,y)); // ngirim data ke ic 4017 (decade counter)
           spi_transfer(make_word(0x00010000,y));
           spi_transfer(make_word(0x00000100,y));
           latchOn();
-          delayMicroseconds(800);//waiting a bit
+          delayMicroseconds(800);
           latchOff();
-          spi_transfer(0);// clearing the data
+          spi_transfer(0);
           spi_transfer(0);
           spi_transfer(0);
           latchOn();
-          digitalWrite(clock,HIGH);//counting up with the 4017
+          digitalWrite(clock,HIGH);
           digitalWrite(clock,LOW);
           i++;
         }
       }
     }
   }
-  finish_scroll(delay_langth);
+  finish_scroll(kecepatan);
 }
 
-void finish_scroll(int delay_scroll){// this function is the same as the funcion above, it just finishing scrolling
+void finish_scroll(int delay_scroll){
   for (int n=0;n<24;n++){
         for(int h=0;h<6;h++)
-          scrolling_word[h] = scrolling_word[h] << 1;
+          outputKata[h] = outputKata[h] << 1;
       for(int w=0;w<delay_scroll;w++){
         for(int k=0;k<6;k++){
           if(i == 6){
@@ -180,24 +177,20 @@ void finish_scroll(int delay_scroll){// this function is the same as the funcion
     }
 }
 
-byte make_word (long posistion,byte turn){
-  byte dummy_word = 0;
-  for(int q=0;q<8;q++){
-    if(scrolling_word[turn] & (posistion<<q))
-      dummy_word |= 0x01<<q;
+byte make_word (long posisi,byte turn){
+  byte dumKata = 0;
+  for(int i=0;i<8;i++){
+    if(outputKata[turn] & (posisi<<i))
+      dumKata |= 0x01<<i;
   }
-  return dummy_word;
+  return dumKata;
 }   
 
-
-  void loop() {
-
-        display_word(1,your_text,panjang,kecepatan);//11 = JUMLAH KARAKTER, 14 = KECEPATAN GESER TEKS NYA, BISA DI ATUR SESUKA MU
-   
-       }
+// FUNGSI UTAMA
+void loop() {
+	display_word(1,inputan_text,panjang,kecepatan);
+}
   
-  
-
 void latchOn(){
   bitSet(PORTB,latchPinPORTB);
 }
@@ -206,25 +199,25 @@ void latchOff(){
   bitClear(PORTB,latchPinPORTB);
 }
 
-
 void setupSPI(){
   byte clr;
-  SPCR |= ( (1<<SPE) | (1<<MSTR) ); // enable SPI as master
-  //SPCR |= ( (1<<SPR1) | (1<<SPR0) ); // set prescaler bits
-  SPCR &= ~( (1<<SPR1) | (1<<SPR0) ); // clear prescaler bits
+  SPCR |= ( (1<<SPE) | (1<<MSTR) );
+
+  //SPCR |= ( (1<<SPR1) | (1<<SPR0) );
+
+  SPCR &= ~( (1<<SPR1) | (1<<SPR0) );
   clr=SPSR; // clear SPI status reg
   clr=SPDR; // clear SPI data reg
   SPSR |= (1<<SPI2X); // set prescaler bits
+
   //SPSR &= ~(1<<SPI2X); // clear prescaler bits
 
   delay(10);
 }
-byte spi_transfer(byte data)
-{
-  SPDR = data;			  // Start the transmission
-  while (!(SPSR & (1<<SPIF)))     // Wait the end of the transmission
-  {
-  };
-  return SPDR;			  // return the received byte, we don't need that
+
+byte spi_transfer(byte data){
+  SPDR = data;			  // memulai transmisi
+  while (!(SPSR & (1<<SPIF)))     // menunggu sampai transmisi selanjutnya
+  return SPDR;			  // mengembalikan byte data
 }
 
