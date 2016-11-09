@@ -80,7 +80,7 @@ Computer Science IPB
 #define PESAWAT {B00000000,B00001000,B00010011,B11111110,B00010001,B00001000}
 #define blok {B11111111,B11111111,B11111111,B11111111,B11111111,B11111111}
 
-#define panjang 4
+#define panjang 5
 #define kecepatan 20
 
 int latchPin = 10;
@@ -95,7 +95,7 @@ int i = 0;
 long outputKata[6];
 int array_turn = 0;
 
-byte inputan_text[panjang][6]={BR,BY,BA,BN}; // masukin teksnya disini
+byte inputan_text[panjang][6]={BA,BG,BU,BN,BG}; // masukin teksnya disini
 
 void setup(){
   Serial.begin(9600);
